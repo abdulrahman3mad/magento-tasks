@@ -14,6 +14,7 @@ use Magento\Framework\App\State;
 use Magento\Framework\Setup\ModuleDataSetupInterface;
 use Magento\Framework\Setup\Patch\DataPatchInterface;
 use Magento\Catalog\Model\ResourceModel\Category\CollectionFactory as CategoryCollectionFactory;
+use Magento\InventoryApi\Api\Data\SourceItemInterface;
 
 class CreateProduct implements DataPatchInterface
 {
@@ -48,7 +49,20 @@ class CreateProduct implements DataPatchInterface
      */
     protected CategoryLinkManagementInterface $categoryLink;
 
+    /**
+     * @var CategoryCollectionFactory
+     */
     protected CategoryCollectionFactory $categoryCollectionFactory;
+
+    /**
+     * @var SourceItemInterfaceFactory
+     */
+    protected SourceItemInterfaceFactory $sourceItemFactory;
+
+    /**
+     * @var SourceItemsSaveInterface
+     */
+    protected SourceItemsSaveInterface $sourceItemsSaveInterface;
 
     /**
      * @param State $appState
@@ -57,6 +71,8 @@ class CreateProduct implements DataPatchInterface
      * @param EavSetup $eavSetup
      * @param CategoryLinkManagementInterface $categoryLink
      * @param CategoryCollectionFactory $categoryCollectionFactory
+     * @param SourceItemInterfaceFactory $sourceItemFactory
+     * @param SourceItemsSaveInterface $sourceItemsSaveInterface
      */
     public function __construct(
         State $appState,
@@ -64,7 +80,9 @@ class CreateProduct implements DataPatchInterface
         ProductRepositoryInterface $productRepository,
         EavSetup $eavSetup,
         CategoryLinkManagementInterface $categoryLink,
-        CategoryCollectionFactory $categoryCollectionFactory
+        CategoryCollectionFactory $categoryCollectionFactory,
+        SourceItemInterfaceFactory $sourceItemFactory,
+        SourceItemsSaveInterface $sourceItemsSaveInterface
     ) {
         $this->appState = $appState;
         $this->productInterfaceFactory = $productInterfaceFactory;
@@ -72,6 +90,8 @@ class CreateProduct implements DataPatchInterface
         $this->eavSetup = $eavSetup;
         $this->categoryLink = $categoryLink;
         $this->categoryCollectionFactory = $categoryCollectionFactory;
+        $this->sourceItemFactory = $sourceItemFactory;
+        $this->sourceItemsSaveInterface = $sourceItemsSaveInterface;
     }
 
     /**
@@ -109,12 +129,7 @@ class CreateProduct implements DataPatchInterface
             return;
         }
 
-        $stockData = [
-            'qty' => 2,
-            'is_in_stock' => 1
-        ];
-
-        $attributeSetId = $this->eavSetup->getAttributeSetId(Product::ENTITY, "Default");
+        $attributeSetId = $this->eavSetup->getAttributeSetId(Product::ENTITY, 'Default');
 
         $product->setTypeId(Type::TYPE_SIMPLE)
             ->setAttributeSetId($attributeSetId)
@@ -123,11 +138,20 @@ class CreateProduct implements DataPatchInterface
             ->setUrlKey('Rattan-Plastic-Chair')
             ->setShortDescription('It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.')
             ->setPrice(200)
-            ->setStockData($stockData)
+            ->setStockData(['use_config_manage_stock' => 1, 'is_qty_decimal' => 0, 'is_in_stock' => 1])
             ->setVisibility(Visibility::VISIBILITY_BOTH)
             ->setStatus(Status::STATUS_ENABLED);
 
         $product = $this->productRepository->save($product);
+
+        $sourceItem = $this->sourceItemFactory->create();
+        $sourceItem->setSku($product->getSku());
+        $sourceItem->setSourceCode('default');
+        $sourceItem->setQuantity(10);
+        $sourceItem->setStatus(SourceItemInterface::STATUS_IN_STOCK);
+
+        $this->sourceItemsSaveInterface->execute([$sourceItem]);
+
         $categoryId = $this->categoryCollectionFactory->create()
             ->addAttributeToFilter('name', "chair")
             ->getFirstItem()
