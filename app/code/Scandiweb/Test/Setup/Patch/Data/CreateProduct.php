@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Scandiweb\Test\Setup\Patch\Data;
 
 use Magento\Catalog\Api\CategoryLinkManagementInterface;
@@ -11,19 +13,12 @@ use Magento\Catalog\Model\Product\Type;
 use Magento\Catalog\Model\Product\Visibility;
 use Magento\Eav\Setup\EavSetup;
 use Magento\Framework\App\State;
-use Magento\Framework\Setup\ModuleDataSetupInterface;
 use Magento\Framework\Setup\Patch\DataPatchInterface;
 use Magento\Catalog\Model\ResourceModel\Category\CollectionFactory as CategoryCollectionFactory;
 use Magento\InventoryApi\Api\Data\SourceItemInterface;
 
 class CreateProduct implements DataPatchInterface
 {
-
-    /**
-     * @var ModuleDataSetupInterface
-     */
-    protected ModuleDataSetupInterface $setup;
-
     /**
      * @var ProductInterfaceFactory
      */
